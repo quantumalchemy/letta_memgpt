@@ -4,7 +4,9 @@
 Put this file where you installed letta container / env- change (last line) port to your needs - run it 
 In Open-Webui  admin/settings connections:
 add LETTA_MEMGPT as an OpenAI API connection
-ie: http://localhost:8088/v1
+ie: http://localhost:8088/v1 (or http://your-network:8088/v1 )
+
+open-webui users Must correspond with your letta agents names / Add {{USER_NAME}} in your Model System Prompt
 
 """
 
@@ -18,12 +20,6 @@ from letta import create_client
 
 app = FastAPI()
 memgpt_client = create_client()
-
-# Add your open-webui user : memgpt corresponding agents / Add {{USER_NAME}} in your Model System Prompt
-agents = {
-    "admin": "agent-bce9c276-64d7-4337-be57-aadae77d641c",
-    "user1": "agent-68e9ff22-4e94-4f0c-a838-f626fa8a6d82"
-}
 
 class Message(BaseModel):
     role: str
@@ -41,14 +37,18 @@ async def chat_completion(request: ChatCompletionRequest):
     return StreamingResponse(stream_response(request), media_type="text/event-stream")
 
 async def stream_response(request: ChatCompletionRequest):
-    artifacts ="""
-Artifacts
-"""
-
-    agent_id = agents.get(request.messages[0].content, "NOT FOUND")
-				
-    #agent_id = "agent-bce9c276-64d7-4337-be57-aadae77d641c"
-    response = memgpt_client.send_message(
+    if "#NONE#" in str(request.messages[-1].content):  
+        yield "data: [DONE]\n\n"
+        return
+        
+    # get agent id from model sys message ** open-webui users Must correspond with your letta agents names / Add {{USER_NAME}} in your Model System Prompt
+    agent_id = memgpt_client.get_agent_id(request.messages[0].content)
+    if not agent_id:  
+        yield f"data: {json.dumps({'choices': [{'delta': {'role': 'assistant', 'content': f'No Agent Contact Admin'}}]})}\n\n"
+        yield f"data: {json.dumps({'choices': [{'finish_reason': 'stop'}]})}\n\n"
+        yield "data: [DONE]\n\n"
+        return
+response = memgpt_client.send_message(
         agent_id=agent_id,
         message=request.messages[-1].content,
         role="user",
