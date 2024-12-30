@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 # Letta/memgpt model to Open-Webui OpenAI API server
 """
+Letta Open-Webui OpenAI API 
 Put this file where you installed letta container / env- change (last line) port to your needs - run it 
-In Open-Webui  admin/settings connections:
-add LETTA_MEMGPT as an OpenAI API connection
+1. In Open-Webui  admin/settings connections:
+add Letta-API as an OpenAI API connection
 ie: http://localhost:8088/v1 (or http://your-network:8088/v1 )
+2. In  workspace/models/ Setup A Open-Webui Model
+a. in your Model System Prompt: open-webui users Must correspond with your letta agents names / Add {{USER_NAME}} 
+b. Advanced Params Stream Chat Response DEFAULT
 
-open-webui users Must correspond with your letta agents names / Add {{USER_NAME}} in your Model System Prompt
+3. open-webui Settings :
+admin/settings -> Interface -> Autocomplete Generation OFF
 
 """
 
@@ -15,7 +20,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import asyncio
-import json
+import os, sys, json, re
+
 from letta import create_client
 
 app = FastAPI()
@@ -34,23 +40,26 @@ class ChatCompletionRequest(BaseModel):
 
 @app.post("/v1/chat/completions")
 async def chat_completion(request: ChatCompletionRequest):
-    return StreamingResponse(stream_response(request), media_type="text/event-stream")
+    match request.model:
+        case 'Letta-API':
+            return StreamingResponse(stream_response(request), media_type="text/event-stream")
+        case _:
+            return
 
 async def stream_response(request: ChatCompletionRequest):
-    if "#NONE#" in str(request.messages[-1].content):  
-        yield "data: [DONE]\n\n"
-        return
-        
+
     # get agent id from model sys message ** open-webui users Must correspond with your letta agents names / Add {{USER_NAME}} in your Model System Prompt
     agent_id = memgpt_client.get_agent_id(request.messages[0].content)
-    if not agent_id:  
-        yield f"data: {json.dumps({'choices': [{'delta': {'role': 'assistant', 'content': f'No Agent'}}]})}\n\n"
-        yield f"data: {json.dumps({'choices': [{'finish_reason': 'stop'}]})}\n\n"
-        yield "data: [DONE]\n\n"
-        return 
+    print("agent_id: ", agent_id)
+        
+    prompt = request.messages[-1].content
+    print("prompt: ",prompt)
+    
+    artifacts = ""
+   
     try:
         response = memgpt_client.send_message(
-            message=request.messages[-1].content,
+            agent_id=agent_id,
             message=prompt,
             role="user",
         )
@@ -96,9 +105,16 @@ async def stream_response(request: ChatCompletionRequest):
     yield f"data: {json.dumps({'choices': [{'finish_reason': 'stop'}]})}\n\n"
     yield "data: [DONE]\n\n"
 
+
 @app.get("/v1/models")
 async def models():
-    return {"data": [{"created": 1726931162, "id": "LETTA_MEMGPT", "object": "model", "owned_by": "quantumalchemy"}], "object": "list"}
+    return {
+        "data": [
+   
+            {"created": 200, "id": "Letta-API", "object": "model", "owned_by": "quantumalchemy"}
+        ],
+        "object": "list"
+    }
 
 @app.get("/v1")
 async def root():
