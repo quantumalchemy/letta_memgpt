@@ -4,11 +4,11 @@
 Letta Open-Webui OpenAI API
 Put this file where you installed letta container / env- change (last line) port to your needs - run it 
 1. In Open-Webui  admin/settings connections:
-add Letta-API as an OpenAI API connection
+add Letta-API as OpenAI API connection
 ie: http://localhost:8088/v1 (or http://your-network:8088/v1 )
-2. In  workspace/models/ Setup A Open-Webui Model
-a. in your Model System Prompt: open-webui users Must correspond with your letta agents names / Add {{USER_NAME}} 
-b. Advanced Params Stream Chat Response DEFAULT
+2. In workspace/models/ Setup A Open-Webui Model
+a. In your Model System Prompt: open-webui users Must correspond with your letta agents names / Add {{USER_NAME}} 
+b. Advanced Params: Stream Chat Response DEFAULT
 
 3. open-webui Settings :
 admin/settings -> Interface -> Autocomplete Generation OFF
