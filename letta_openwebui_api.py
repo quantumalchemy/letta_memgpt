@@ -48,43 +48,59 @@ async def stream_response(request: ChatCompletionRequest):
         yield f"data: {json.dumps({'choices': [{'finish_reason': 'stop'}]})}\n\n"
         yield "data: [DONE]\n\n"
         return
-response = memgpt_client.send_message(
+    response = memgpt_client.send_message(
         agent_id=agent_id,
         message=request.messages[-1].content,
         role="user",
     )
-	#LETTA OBJ PARSE
-    for message_group in response.messages:
-        internal_monologue = None
-        function_call_message = None
-        function_return = None
-
-        if hasattr(message_group, 'internal_monologue'):
-            internal_monologue = f"""
+	#LETTA OBJ PARSE     
+    try:
+        response = memgpt_client.send_message(
+            agent_id=agent_id,
+            message=prompt,
+            role="user",
+        )
+        
+        for message_group in response.messages:
+            internal_monologue = ""
+            tool_call_message  = ""
+            function_return = ""
+            
+            
+            if hasattr(message_group, 'reasoning'):
+                internal_monologue = str(message_group.reasoning)
+                internal_monologue = f"""
 <details>
 <summary>Internal Monologue:</summary>
-{str(message_group.internal_monologue)} 
+{internal_monologue}
 </details>\n\n"""
+
+            if hasattr(message_group, 'tool_call'):
+                tool_call = message_group.tool_call
+                if tool_call.name == 'send_message':
+                    tool_call_message = json.loads(tool_call.arguments)['message']
+                    
+
 
             yield f"data: {json.dumps({'choices': [{'delta': {'role': 'assistant', 'content': f'{internal_monologue}'}}]})}\n\n"
             await asyncio.sleep(0.01)
+                    
+            yield f"data: {json.dumps({'choices': [{'delta': {'role': 'assistant', 'content': f'{tool_call_message}'}}]})}\n\n"
+            await asyncio.sleep(0.01)
 
-        if hasattr(message_group, 'function_call'):
-            function_call = message_group.function_call
-            if function_call.name == 'send_message':
-                function_call_message = json.loads(function_call.arguments)['message']
-                yield f"data: {json.dumps({'choices': [{'delta': {'role': 'assistant', 'content': f'{function_call_message}'}}]})}\n\n"
-                await asyncio.sleep(0.01)
+        
 
-        # Yield function return if present
-        #if function_return:
-        #    yield f"data: {json.dumps({'choices': [{'delta': {'role': 'assistant', 'content': f'[Function Return] {function_return}'}}]})}\n\n"
-        #    await asyncio.sleep(0.01)
-			 
+    except json.JSONDecodeError as e: #except Exception as e:
+         
+        #print(f"Error memgpt_client.send_message: {e}", file=log, flush=True)
+        artifacts =""
+        yield f"data: {json.dumps({'choices': [{'delta': {'content': 'There was a problem Please click Regenerate to recover the response' }}]})}\n\n"
+        pass
+                
+    await asyncio.sleep(0.01)
     yield f"data: {json.dumps({'choices': [{'delta': {'content': f'{artifacts}'}}]})}\n\n"
     yield f"data: {json.dumps({'choices': [{'finish_reason': 'stop'}]})}\n\n"
     yield "data: [DONE]\n\n"
-    artifacts =""
 
 @app.get("/v1/models")
 async def models():
