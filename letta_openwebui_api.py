@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# Letta/memgpt model to Open-Webui OpenAI API server
+
 """
-Letta Open-Webui OpenAI API 
+Letta Open-Webui OpenAI API
 Put this file where you installed letta container / env- change (last line) port to your needs - run it 
 1. In Open-Webui  admin/settings connections:
 add Letta-API as an OpenAI API connection
@@ -95,7 +95,6 @@ async def stream_response(request: ChatCompletionRequest):
 
     except json.JSONDecodeError as e: #except Exception as e:
          
-        #print(f"Error memgpt_client.send_message: {e}", file=log, flush=True)
         artifacts =""
         yield f"data: {json.dumps({'choices': [{'delta': {'content': 'There was a problem Please click Regenerate to recover the response' }}]})}\n\n"
         pass
