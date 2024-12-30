@@ -44,19 +44,13 @@ async def stream_response(request: ChatCompletionRequest):
     # get agent id from model sys message ** open-webui users Must correspond with your letta agents names / Add {{USER_NAME}} in your Model System Prompt
     agent_id = memgpt_client.get_agent_id(request.messages[0].content)
     if not agent_id:  
-        yield f"data: {json.dumps({'choices': [{'delta': {'role': 'assistant', 'content': f'No Agent Contact Admin'}}]})}\n\n"
+        yield f"data: {json.dumps({'choices': [{'delta': {'role': 'assistant', 'content': f'No Agent'}}]})}\n\n"
         yield f"data: {json.dumps({'choices': [{'finish_reason': 'stop'}]})}\n\n"
         yield "data: [DONE]\n\n"
-        return
-    response = memgpt_client.send_message(
-        agent_id=agent_id,
-        message=request.messages[-1].content,
-        role="user",
-    )
-	#LETTA OBJ PARSE     
+        return 
     try:
         response = memgpt_client.send_message(
-            agent_id=agent_id,
+            message=request.messages[-1].content,
             message=prompt,
             role="user",
         )
