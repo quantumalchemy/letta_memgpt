@@ -12,6 +12,7 @@ b. Advanced Params: Stream Chat Response DEFAULT
 
 3. open-webui Settings :
 admin/settings -> Interface -> Autocomplete Generation OFF
+admin/settings -> Interface -> Title Generation Prompt: !NONE
 
 """
 
@@ -51,6 +52,13 @@ async def stream_response(request: ChatCompletionRequest):
     # get agent id from model sys message ** open-webui users Must correspond with your letta agents names / Add {{USER_NAME}} in your Model System Prompt
     agent_id = memgpt_client.get_agent_id(request.messages[0].content)
     print("agent_id: ", agent_id)
+    # admin/settings -> Interface -> Title Generation Prompt: !NONE (Pass)
+    # openwebui makes as 2nd Call -> Dont What This!
+    if "!NONE" in str(request.messages[-1].content) :  
+        print("Title Generation Prompt PASS")
+        yield f"data: {json.dumps({'choices': [{'finish_reason': 'stop'}]})}\n\n"
+        yield "data: [DONE]\n\n"
+        return
         
     prompt = request.messages[-1].content
     print("prompt: ",prompt)
